@@ -409,39 +409,80 @@ void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 	const float dt = gt.DeltaTime();
 
 	//init a vec to predict the new position after we move
-	XMVECTOR predictPos = XMVectorSet(0.f, 0.f, 0.f, 0.f);
+	XMVECTOR predictedPos = XMVectorSet(0.f, 0.f, 0.f, 0.f);
 
 	if (GetAsyncKeyState('W') & 0x8000) //most significant bit (MSB) is 1 when key is pressed (1000 000 000 000)
 	{
 		//calc the distance to move the camera forward
+		//so rep the speed by multiplying the camera speed and delta time
 		XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+
 		//calc the predicted position after moving forward
-		predictPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+		predictedPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+
 		//check for collision at the predicted position
-		if (CheckCameraCollision(predictPos) == false)
+		if (CheckCameraCollision(predictedPos) == false)
 		{
 			// If no collision, move the forward
-			mCamera.Walk(10.0f * dt);
+			mCamera.Walk(mCameraSpeed * dt);
 		}
 	}
 
 	if (GetAsyncKeyState('S') & 0x8000)
 	{
-		mCamera.Walk(-10.0f * dt);
+		XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+
+		predictedPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+		if (CheckCameraCollision(predictedPos) == false)
+		{
+			mCamera.Walk(-mCameraSpeed * dt);
+		}
 	}
 
 	if (GetAsyncKeyState('A') & 0x8000)
 	{
-		mCamera.Strafe(-10.0f * dt);
+		XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+
+		predictedPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+		if (CheckCameraCollision(predictedPos) == false)
+		{
+			mCamera.Strafe(-mCameraSpeed * dt);
+		}
 	}
 
 	if (GetAsyncKeyState('D') & 0x8000)
 	{
-		mCamera.Strafe(10.0f * dt);
+		XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+
+		predictedPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+		if (CheckCameraCollision(predictedPos) == false)
+		{
+			mCamera.Strafe(mCameraSpeed * dt);
+		}
 	}
 
 	//lets add q and e to go up and down
+	if (GetAsyncKeyState('Q') & 0x8000) // going down
+	{
+		XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
 
+		predictedPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+		if (CheckCameraCollision(predictedPos) == false)
+		{
+			mCamera.Pedestal(-mCameraSpeed * dt); //using the pedestal func to go down
+		}
+	}
+
+	if (GetAsyncKeyState('E') & 0x8000) // going up
+	{
+		XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+
+		predictedPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+		if (CheckCameraCollision(predictedPos) == false)
+		{
+			mCamera.Pedestal(mCameraSpeed * dt); //using the pedestal func to go up
+		}
+	}
 	mCamera.UpdateViewMatrix();
 
 	//bounding box
