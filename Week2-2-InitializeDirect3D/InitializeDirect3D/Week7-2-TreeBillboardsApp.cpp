@@ -29,7 +29,12 @@ struct RenderItem
 {
 	RenderItem() = default;
 
+	//for rendering the bounding box
 	BoundingBox RenderBounds;
+
+	//adding a vari to store the name
+	std::string Name;
+
     // World matrix of the shape that describes the object's local space
     // relative to the world space, which defines the position, orientation,
     // and scale of the object in the world.
@@ -106,8 +111,11 @@ private:
     void BuildFrameResources();
     void BuildMaterials();
     void BuildRenderItems();
+
 	//BUILDING COLLISION
 	bool CheckCameraCollision(FXMVECTOR predictPos);
+	bool mRenderBoundingBoxes = false;
+
     void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
 	void CreateNewObject(const char* item, XMMATRIX p, XMMATRIX q, XMMATRIX r, UINT ObjIndex, const char* material);
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
@@ -186,6 +194,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
 TreeBillboardsApp::TreeBillboardsApp(HINSTANCE hInstance)
     : D3DApp(hInstance)
 {
+	mRenderBoundingBoxes = false;
 }
 
 TreeBillboardsApp::~TreeBillboardsApp()
@@ -204,6 +213,9 @@ void TreeBillboardsApp::CreateNewObject(const char* item, XMMATRIX p, XMMATRIX q
 	RightWall->Geo = mGeometries["boxGeo"].get();
 
 	RightWall->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//adding the name
+	RightWall->Name = item;
+
 	//adding collision bounds
 	RightWall->RenderBounds = RightWall->Geo->DrawArgs[item].Bounds;
 	RightWall->IndexCount = RightWall->Geo->DrawArgs[item].IndexCount;
@@ -213,7 +225,6 @@ void TreeBillboardsApp::CreateNewObject(const char* item, XMMATRIX p, XMMATRIX q
 	mRitemLayer[(int)RenderLayer::Opaque].push_back(RightWall.get());
 	mAllRitems.push_back(std::move(RightWall));
 }
-
 
 ///////////////////////// INIT ////////////////////////////////////
 bool TreeBillboardsApp::Initialize()
@@ -369,6 +380,19 @@ void TreeBillboardsApp::Draw(const GameTimer& gt)
     // Because we are on the GPU timeline, the new fence point won't be 
     // set until the GPU finishes processing all the commands prior to this Signal().
     mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+
+	//// Conditionally render bounding boxes.
+	//if (mRenderBoundingBoxes) 
+	//{
+	//	for (const auto& renderItem : mAllRitems) 
+	//	{
+	//		if (renderItem->RenderBounds.IsValid()) 
+	//		{
+	//			// Render bounding box
+	//			RenderBoundingBox(renderItem->RenderBounds);
+	//		}
+	//	}
+	//}
 }
 ///////////////////////// MOVING DOWN WITH THE MOUSE ////////////////////////////////////
 void TreeBillboardsApp::OnMouseDown(WPARAM btnState, int x, int y)
@@ -483,6 +507,13 @@ void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 			mCamera.Pedestal(mCameraSpeed * dt); //using the pedestal func to go up
 		}
 	}
+
+	//a key to show the bounding boxes
+	if (GetAsyncKeyState('1') & 0x8000) 
+	{
+		// Toggle flag for rendering bounding boxes
+		mRenderBoundingBoxes = !mRenderBoundingBoxes; 
+	}
 	mCamera.UpdateViewMatrix();
 
 	//bounding box
@@ -494,9 +525,9 @@ void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 ///////////////////////// Checking Camera Collision ////////////////////////////////////
 bool TreeBillboardsApp::CheckCameraCollision(FXMVECTOR predictPos)
 {
-	//add collision here
+	//adding collision here
 	// iterate through all opaque render items in the scene.
-	for (auto ri : mRitemLayer[(int)RenderLayer::Opaque])
+	for (auto renderIt : mRitemLayer[(int)RenderLayer::Opaque])
 	{
 		// Create a temporary bounding box around the predicted camera position.
 		BoundingBox tempCameraBound;
@@ -507,20 +538,23 @@ bool TreeBillboardsApp::CheckCameraCollision(FXMVECTOR predictPos)
 		BoundingBox localCameraBound;
 
 		// Get the world matrix of the current render item and calculate its inverse.
-		XMMATRIX W = XMLoadFloat4x4(&ri->World);
+		XMMATRIX W = XMLoadFloat4x4(&renderIt->World);
 		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
 
 		// Transform the temporary camera bounding box to the local space of the current render item.
 		tempCameraBound.Transform(localCameraBound, invWorld);
 
-		// Check for intersection between the local camera bounding box and the bounding box of the current render item.
-		if (ri->RenderBounds.Intersects(localCameraBound))
+		// Check for intersection (overlap) between the local camera bounding box and the bounding box of the current render item.
+		if (renderIt->RenderBounds.Intersects(localCameraBound))
 		{
-			// If intersection is detected, return true to indicate collision.
+			//for debugging and knowing what we are colliding with
+			std::wstring message = L"Collision detected with render item: " + std::wstring(renderIt->Name.begin(), renderIt->Name.end());
+			MessageBox(nullptr, message.c_str(), L"Collision Detected", MB_OK | MB_ICONINFORMATION);
+			// If intersection is detected, return true 
 			return true;
 		}
 	}
-	// If no collision is detected with any render item, return false.
+	//no collision is detected with any render item, return false
 	return false;
 }
 ///////////////////////// SETTING UP ANIMATIONS ////////////////////////////////////
@@ -1261,6 +1295,13 @@ void TreeBillboardsApp::BuildBoxGeometry()
 		wedge.Vertices.size() +
 		torus.Vertices.size();
 
+	//Calculate the bound box
+	//step1 
+	XMFLOAT3 vMinf3(+MathHelper::Infinity, +MathHelper::Infinity, +MathHelper::Infinity);
+	XMFLOAT3 vMaxf3(-MathHelper::Infinity, -MathHelper::Infinity, -MathHelper::Infinity);
+
+	XMVECTOR vMin = XMLoadFloat3(&vMinf3);
+	XMVECTOR vMax = XMLoadFloat3(&vMaxf3);
 
 	std::vector<Vertex> vertices(totalVertexCount); //array
 	UINT k = 0;
@@ -1270,77 +1311,201 @@ void TreeBillboardsApp::BuildBoxGeometry()
 		vertices[k].Pos = p;
 		vertices[k].Normal = box.Vertices[i].Normal;
 		vertices[k].TexC = box.Vertices[i].TexC;
+		//Calculate the bound box per shape
+		//step 2 - finding the min and max along the verticies of the shape
+		XMVECTOR Pos = XMLoadFloat3(&box.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	//step 3 - bounding box calculation
+	BoundingBox bounds;
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4 - assigning the bounds to the submesh
+	boxSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < cylinder.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = cylinder.Vertices[i].Position;
 		vertices[k].Normal = cylinder.Vertices[i].Normal;
 		vertices[k].TexC = cylinder.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::SteelBlue);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&cylinder.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	cylinderSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < sphere.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = sphere.Vertices[i].Position;
 		vertices[k].Normal = sphere.Vertices[i].Normal;
 		vertices[k].TexC = sphere.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::DarkOliveGreen);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&sphere.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	sphereSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < GEOsphere.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = GEOsphere.Vertices[i].Position;
 		vertices[k].Normal = GEOsphere.Vertices[i].Normal;
 		vertices[k].TexC = GEOsphere.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::Orange);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&GEOsphere.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	geoSphereSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < quad.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = quad.Vertices[i].Position;
 		vertices[k].Normal = quad.Vertices[i].Normal;
 		vertices[k].TexC = quad.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::DarkOliveGreen);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&quad.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	quadSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < triPrism.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = triPrism.Vertices[i].Position;
 		vertices[k].Normal = triPrism.Vertices[i].Normal;
 		vertices[k].TexC = triPrism.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::DarkSlateGray);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&triPrism.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	triPrismSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < cone.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = cone.Vertices[i].Position;
 		vertices[k].Normal = cone.Vertices[i].Normal;
 		vertices[k].TexC = cone.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::DimGray);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&cone.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	coneSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < pyramid.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = pyramid.Vertices[i].Position;
 		vertices[k].Normal = pyramid.Vertices[i].Normal;
 		vertices[k].TexC = pyramid.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::DarkOliveGreen);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&pyramid.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	pyramidSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < diamond.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = diamond.Vertices[i].Position;
 		vertices[k].Normal = diamond.Vertices[i].Normal;
 		vertices[k].TexC = diamond.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::CornflowerBlue);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&diamond.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	diamondSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < wedge.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = wedge.Vertices[i].Position;
 		vertices[k].Normal = wedge.Vertices[i].Normal;
 		vertices[k].TexC = wedge.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::DimGray);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&wedge.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	wedgeSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
+
 	for (size_t i = 0; i < torus.Vertices.size(); ++i, ++k)
 	{
 		vertices[k].Pos = torus.Vertices[i].Position;
 		vertices[k].Normal = torus.Vertices[i].Normal;
 		vertices[k].TexC = torus.Vertices[i].TexC;
 		//vertices[k].Color = XMFLOAT4(DirectX::Colors::DarkOliveGreen);
+		//Calculate the bound box per shape
+		XMVECTOR Pos = XMLoadFloat3(&torus.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 	}
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+	//step 4
+	torusSubmesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 
 	//inserting the indices
 	std::vector<std::uint16_t> indices;
