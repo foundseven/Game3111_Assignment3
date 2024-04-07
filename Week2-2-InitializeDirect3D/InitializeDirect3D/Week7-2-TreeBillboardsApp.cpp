@@ -29,6 +29,7 @@ struct RenderItem
 {
 	RenderItem() = default;
 
+	BoundingBox RenderBounds;
     // World matrix of the shape that describes the object's local space
     // relative to the world space, which defines the position, orientation,
     // and scale of the object in the world.
@@ -106,7 +107,7 @@ private:
     void BuildMaterials();
     void BuildRenderItems();
 	//BUILDING COLLISION
-	//	bool CheckCameraCollision(FXMVECTOR predictPos);
+	bool CheckCameraCollision(FXMVECTOR predictPos);
     void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
 	void CreateNewObject(const char* item, XMMATRIX p, XMMATRIX q, XMMATRIX r, UINT ObjIndex, const char* material);
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
@@ -152,6 +153,7 @@ private:
 	float mCameraSpeed = 10.f;
 
 	//Bounding boxes for collision
+	BoundingBox mCameraBoundbox;
 
 
     POINT mLastMousePos;
@@ -202,6 +204,8 @@ void TreeBillboardsApp::CreateNewObject(const char* item, XMMATRIX p, XMMATRIX q
 	RightWall->Geo = mGeometries["boxGeo"].get();
 
 	RightWall->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//adding collision bounds
+	RightWall->RenderBounds = RightWall->Geo->DrawArgs[item].Bounds;
 	RightWall->IndexCount = RightWall->Geo->DrawArgs[item].IndexCount;
 	RightWall->StartIndexLocation = RightWall->Geo->DrawArgs[item].StartIndexLocation;
 	RightWall->BaseVertexLocation = RightWall->Geo->DrawArgs[item].BaseVertexLocation;
@@ -212,7 +216,6 @@ void TreeBillboardsApp::CreateNewObject(const char* item, XMMATRIX p, XMMATRIX q
 
 
 ///////////////////////// INIT ////////////////////////////////////
-
 bool TreeBillboardsApp::Initialize()
 {
     if(!D3DApp::Initialize())
@@ -229,7 +232,8 @@ bool TreeBillboardsApp::Initialize()
 	mCamera.SetPosition(0.0f, 15.0f, -100.0f);
 
 	//bounding box POS 
-
+	mCameraBoundbox.Center = mCamera.GetPosition3f();
+	mCameraBoundbox.Extents = XMFLOAT3(1.1f, 1.1f, 1.1f);
 
     mWaves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f); //change water size
  
@@ -272,7 +276,6 @@ void TreeBillboardsApp::OnResize()
 
 }
 ///////////////////////// UPDATE ////////////////////////////////////
-
 void TreeBillboardsApp::Update(const GameTimer& gt)
 {
     OnKeyboardInput(gt);
@@ -299,7 +302,6 @@ void TreeBillboardsApp::Update(const GameTimer& gt)
     UpdateWaves(gt);
 }
 ///////////////////////// DRAW ////////////////////////////////////
-
 void TreeBillboardsApp::Draw(const GameTimer& gt)
 {
     auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
@@ -369,7 +371,6 @@ void TreeBillboardsApp::Draw(const GameTimer& gt)
     mCommandQueue->Signal(mFence.Get(), mCurrentFence);
 }
 ///////////////////////// MOVING DOWN WITH THE MOUSE ////////////////////////////////////
-
 void TreeBillboardsApp::OnMouseDown(WPARAM btnState, int x, int y)
 {
     mLastMousePos.x = x;
@@ -378,7 +379,6 @@ void TreeBillboardsApp::OnMouseDown(WPARAM btnState, int x, int y)
     SetCapture(mhMainWnd);
 }
 ///////////////////////// MOVING UP WITH THE MOUSE ////////////////////////////////////
-
 void TreeBillboardsApp::OnMouseUp(WPARAM btnState, int x, int y)
 {
     ReleaseCapture();
@@ -408,42 +408,81 @@ void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 	//implement a func that will allow us to 
 	const float dt = gt.DeltaTime();
 
+	//init a vec to predict the new position after we move
+	XMVECTOR predictPos = XMVectorSet(0.f, 0.f, 0.f, 0.f);
+
 	if (GetAsyncKeyState('W') & 0x8000) //most significant bit (MSB) is 1 when key is pressed (1000 000 000 000)
-		mCamera.Walk(10.0f * dt);
+	{
+		//calc the distance to move the camera forward
+		XMVECTOR s = XMVectorReplicate(mCameraSpeed * dt);
+		//calc the predicted position after moving forward
+		predictPos = XMVectorMultiplyAdd(s, mCamera.GetLook(), mCamera.GetPosition());
+		//check for collision at the predicted position
+		if (CheckCameraCollision(predictPos) == false)
+		{
+			// If no collision, move the forward
+			mCamera.Walk(10.0f * dt);
+		}
+	}
 
 	if (GetAsyncKeyState('S') & 0x8000)
+	{
 		mCamera.Walk(-10.0f * dt);
+	}
 
 	if (GetAsyncKeyState('A') & 0x8000)
+	{
 		mCamera.Strafe(-10.0f * dt);
+	}
 
 	if (GetAsyncKeyState('D') & 0x8000)
+	{
 		mCamera.Strafe(10.0f * dt);
+	}
 
 	//lets add q and e to go up and down
 
 	mCamera.UpdateViewMatrix();
 
+	//bounding box
+	mCameraBoundbox.Center = mCamera.GetPosition3f();
+
+
 }
-///////////////////////// UPDATING CAMERA ////////////////////////////////////
 
-//void TreeBillboardsApp::UpdateCamera(const GameTimer& gt)
-//{
-//	// Convert Spherical to Cartesian coordinates.
-//	mEyePos.x = mRadius*sinf(mPhi)*cosf(mTheta);
-//	mEyePos.z = mRadius*sinf(mPhi)*sinf(mTheta);
-//	mEyePos.y = mRadius*cosf(mPhi);
-//
-//	// Build the view matrix.
-//	XMVECTOR pos = XMVectorSet(mEyePos.x, mEyePos.y, mEyePos.z, 1.0f);
-//	XMVECTOR target = XMVectorZero();
-//	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-//
-//	XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-//	XMStoreFloat4x4(&mView, view);
-//}
+///////////////////////// Checking Camera Collision ////////////////////////////////////
+bool TreeBillboardsApp::CheckCameraCollision(FXMVECTOR predictPos)
+{
+	//add collision here
+	// iterate through all opaque render items in the scene.
+	for (auto ri : mRitemLayer[(int)RenderLayer::Opaque])
+	{
+		// Create a temporary bounding box around the predicted camera position.
+		BoundingBox tempCameraBound;
+		XMStoreFloat3(&tempCameraBound.Center, predictPos); // Set the center
+		tempCameraBound.Extents = mCameraBoundbox.Extents; // Set the extents
+
+		// Create a local camera bounding box relative to the current render item's world space.
+		BoundingBox localCameraBound;
+
+		// Get the world matrix of the current render item and calculate its inverse.
+		XMMATRIX W = XMLoadFloat4x4(&ri->World);
+		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
+
+		// Transform the temporary camera bounding box to the local space of the current render item.
+		tempCameraBound.Transform(localCameraBound, invWorld);
+
+		// Check for intersection between the local camera bounding box and the bounding box of the current render item.
+		if (ri->RenderBounds.Intersects(localCameraBound))
+		{
+			// If intersection is detected, return true to indicate collision.
+			return true;
+		}
+	}
+	// If no collision is detected with any render item, return false.
+	return false;
+}
 ///////////////////////// SETTING UP ANIMATIONS ////////////////////////////////////
-
 void TreeBillboardsApp::AnimateMaterials(const GameTimer& gt)
 {
 	// Scroll the water material texture coordinates.
@@ -518,7 +557,6 @@ void TreeBillboardsApp::UpdateMaterialCBs(const GameTimer& gt)
 	}
 }
 ///////////////////////// UPDATING MAIN PASS ////////////////////////////////////
-
 void TreeBillboardsApp::UpdateMainPassCB(const GameTimer& gt)
 {
 	//XMMATRIX view = XMLoadFloat4x4(&mView);
@@ -611,7 +649,6 @@ void TreeBillboardsApp::UpdateWaves(const GameTimer& gt)
 	mWavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
 }
 ///////////////////////// LOADING TEXTURES ////////////////////////////////////
-
 void TreeBillboardsApp::LoadTextures()
 {
 	//create new textures in here
@@ -907,11 +944,23 @@ void TreeBillboardsApp::BuildLandGeometry()
     GeometryGenerator::MeshData grid = geoGen.CreateGrid(125.0f, 125.0f, 50, 50);
 	
     std::vector<Vertex> vertices(grid.Vertices.size());
+
+	//Calculate the BB - Step One
+	XMFLOAT3 vMinf3(+MathHelper::Infinity, +MathHelper::Infinity, +MathHelper::Infinity);
+	XMFLOAT3 vMaxf3(-MathHelper::Infinity, -MathHelper::Infinity, -MathHelper::Infinity);
+
+	XMVECTOR vMin = XMLoadFloat3(&vMinf3);
+	XMVECTOR vMax = XMLoadFloat3(&vMaxf3);
+
     for(size_t i = 0; i < grid.Vertices.size(); ++i)
     {
 		auto& p = grid.Vertices[i].Position;
 		vertices[i].Pos.x = -p.z; //rotate 90 degreees counter clockwise
 		vertices[i].Pos.z = p.x; //define the z coordinate
+
+		// Update the minimum and maximum extents of the bounding box
+		vMin = XMVectorMin(vMin, XMLoadFloat3(&p));
+		vMax = XMVectorMax(vMax, XMLoadFloat3(&p));
 
 		// Calculate the center of the grid aka 0
 		float centerX = 0;
@@ -938,6 +987,11 @@ void TreeBillboardsApp::BuildLandGeometry()
 		vertices[i].TexC = grid.Vertices[i].TexC;
       
     }
+
+	// After the loop, extract the minimum and maximum values from the XMVECTORs
+	//XMFLOAT3 vMinf3, vMaxf3;
+	XMStoreFloat3(&vMinf3, vMin);
+	XMStoreFloat3(&vMaxf3, vMax);
 
     const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
 
@@ -968,6 +1022,15 @@ void TreeBillboardsApp::BuildLandGeometry()
 	submesh.IndexCount = (UINT)indices.size();
 	submesh.StartIndexLocation = 0;
 	submesh.BaseVertexLocation = 0;
+
+	//Calculate Bound Box for collision
+	//step 3
+	BoundingBox bounds;
+	XMStoreFloat3(&bounds.Center, 0.5f * (vMin + vMax));
+	XMStoreFloat3(&bounds.Extents, 0.5f * (vMax - vMin));
+
+	//step 4
+	submesh.Bounds = bounds;
 
 	geo->DrawArgs["grid"] = submesh;
 
@@ -1596,6 +1659,7 @@ void TreeBillboardsApp::BuildRenderItems()
 	gridRitem->Mat = mMaterials["grass"].get();
 	gridRitem->Geo = mGeometries["landGeo"].get();
 	gridRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	gridRitem->RenderBounds = gridRitem->Geo->DrawArgs["grid"].Bounds;
     gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
     gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
     gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
