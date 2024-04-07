@@ -148,22 +148,11 @@ private:
     PassConstants mMainPassCB;
 
 	//Adding in First Person Camera
-	//Camera mCamera;
 	Camera mCamera;
 	float mCameraSpeed = 10.f;
 
 	//Bounding boxes for collision
 
-
-
-	//I WONT NEED THESE
-	//XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
-	//XMFLOAT4X4 mView = MathHelper::Identity4x4();
-	//XMFLOAT4X4 mProj = MathHelper::Identity4x4();
-
-    //float mTheta = 1.5f*XM_PI;
-    //float mPhi = XM_PIDIV2 - 0.1f;
-    //float mRadius = 50.0f;
 
     POINT mLastMousePos;
 };
@@ -237,7 +226,7 @@ bool TreeBillboardsApp::Initialize()
     mCbvSrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	//setting the camera POS
-	mCamera.SetPosition(0.0f, 2.0f, 0.0f);
+	mCamera.SetPosition(0.0f, 15.0f, -100.0f);
 
 	//bounding box POS 
 
@@ -404,30 +393,11 @@ void TreeBillboardsApp::OnMouseMove(WPARAM btnState, int x, int y)
         float dx = XMConvertToRadians(0.25f*static_cast<float>(x - mLastMousePos.x));
         float dy = XMConvertToRadians(0.25f*static_cast<float>(y - mLastMousePos.y));
 
-        // Update angles based on input to orbit camera around box.
-        //mTheta += dx;
-        //mPhi += dy;
-
-        // Restrict the angle mPhi.
-        //mPhi = MathHelper::Clamp(mPhi, 0.1f, MathHelper::Pi - 0.1f);
-		
 		//step4: Instead of updating the angles based on input to orbit camera around scene, 
 		//we rotate the cameras look direction:
 		mCamera.Pitch(dy);
 		mCamera.RotateY(dx);
     }
-    //else if((btnState & MK_RBUTTON) != 0)
-    //{
-    //    // Make each pixel correspond to 0.2 unit in the scene.
-    //    float dx = 0.2f*static_cast<float>(x - mLastMousePos.x);
-    //    float dy = 0.2f*static_cast<float>(y - mLastMousePos.y);
-
-    //    // Update the camera radius based on input.
-    //    mRadius += dx - dy;
-
-    //    // Restrict the radius.
-    //    mRadius = MathHelper::Clamp(mRadius, 5.0f, 150.0f);
-    //}
 
     mLastMousePos.x = x;
     mLastMousePos.y = y;
