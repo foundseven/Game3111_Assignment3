@@ -218,6 +218,7 @@ void TreeBillboardsApp::CreateNewObject(const char* item, XMMATRIX p, XMMATRIX q
 
 	//adding collision bounds
 	RightWall->RenderBounds = RightWall->Geo->DrawArgs[item].Bounds;
+	/////////////////////////////////////////////////////////////////
 	RightWall->IndexCount = RightWall->Geo->DrawArgs[item].IndexCount;
 	RightWall->StartIndexLocation = RightWall->Geo->DrawArgs[item].StartIndexLocation;
 	RightWall->BaseVertexLocation = RightWall->Geo->DrawArgs[item].BaseVertexLocation;
@@ -240,7 +241,7 @@ bool TreeBillboardsApp::Initialize()
     mCbvSrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	//setting the camera POS
-	mCamera.SetPosition(0.0f, 15.0f, -100.0f);
+	mCamera.SetPosition(0.0f, 7.0f, -225.0f);
 
 	//bounding box POS 
 	mCameraBoundbox.Center = mCamera.GetPosition3f();
@@ -429,7 +430,7 @@ void TreeBillboardsApp::OnMouseMove(WPARAM btnState, int x, int y)
  
 void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 {
-	//implement a func that will allow us to 
+	//implement a func that will allow us to  call on dt
 	const float dt = gt.DeltaTime();
 
 	//init a vec to predict the new position after we move
@@ -514,12 +515,11 @@ void TreeBillboardsApp::OnKeyboardInput(const GameTimer& gt)
 		// Toggle flag for rendering bounding boxes
 		mRenderBoundingBoxes = !mRenderBoundingBoxes; 
 	}
+
 	mCamera.UpdateViewMatrix();
 
 	//bounding box
 	mCameraBoundbox.Center = mCamera.GetPosition3f();
-
-
 }
 
 ///////////////////////// Checking Camera Collision ////////////////////////////////////
@@ -1034,8 +1034,11 @@ void TreeBillboardsApp::BuildLandGeometry()
 		vertices[i].Pos.z = p.x; //define the z coordinate
 
 		// Update the minimum and maximum extents of the bounding box
-		vMin = XMVectorMin(vMin, XMLoadFloat3(&p));
-		vMax = XMVectorMax(vMax, XMLoadFloat3(&p));
+		/*vMin = XMVectorMin(vMin, XMLoadFloat3(&p));
+		vMax = XMVectorMax(vMax, XMLoadFloat3(&p));*/
+		XMVECTOR Pos = XMLoadFloat3(&grid.Vertices[i].Position);
+		vMin = XMVectorMin(vMin, Pos);
+		vMax = XMVectorMax(vMax, Pos);
 
 		// Calculate the center of the grid aka 0
 		float centerX = 0;
@@ -1060,7 +1063,6 @@ void TreeBillboardsApp::BuildLandGeometry()
         }
 		vertices[i].Normal = GetHillsNormal(p.x, p.z);
 		vertices[i].TexC = grid.Vertices[i].TexC;
-      
     }
 
 	// After the loop, extract the minimum and maximum values from the XMVECTORs
@@ -1106,6 +1108,8 @@ void TreeBillboardsApp::BuildLandGeometry()
 
 	//step 4
 	submesh.Bounds = bounds;
+	vMin = XMLoadFloat3(&vMinf3);
+	vMax = XMLoadFloat3(&vMaxf3);
 
 	geo->DrawArgs["grid"] = submesh;
 
@@ -1865,6 +1869,8 @@ void TreeBillboardsApp::BuildRenderItems()
 	gridRitem->Mat = mMaterials["grass"].get();
 	gridRitem->Geo = mGeometries["landGeo"].get();
 	gridRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	//bounding box 
+	//gridRitem->Name = item;
 	gridRitem->RenderBounds = gridRitem->Geo->DrawArgs["grid"].Bounds;
     gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
     gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
@@ -2034,7 +2040,7 @@ void TreeBillboardsApp::BuildRenderItems()
 		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
 		objCBIndex, "stone");
 
-	//torus - WHY WONT YOU CHANGE MAT
+	//torus
 	objCBIndex++;
 	CreateNewObject("torus", XMMatrixRotationAxis({ 1,0,0,0 }, XMConvertToRadians(90)) * XMMatrixScaling(2.5f, 2.5f, 2.5f),
 		XMMatrixTranslation(0.0f, 25.0f, -4.0f),
@@ -2094,6 +2100,156 @@ void TreeBillboardsApp::BuildRenderItems()
 			objCBIndex, "marble");
 
 	}
+
+	// THE MAZEEEEE
+	//inner
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 28.0f),
+		XMMatrixTranslation(64.0f, 2.5f, 0.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//8
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 49.0f),
+		XMMatrixTranslation(-64.0f, 2.5f, 0.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(29.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(0.0f, 2.5f, 64.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//outer
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 84.0f),
+		XMMatrixTranslation(192.0f, 2.5f, 0.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 84.0f),
+		XMMatrixTranslation(-192.0f, 2.5f, 0.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(86.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(0.0f, 2.5f, 192.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+	//left - outer
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(40.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(-104.0f, 2.5f, -190.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+	//right - outer
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(40.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(104.0f, 2.5f, -190.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+	//left going in - 1
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(-13.0f, 2.5f, -168.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//right going in - 2
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 18.0f),
+		XMMatrixTranslation(13.0f, 2.5f, -150.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//3
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(23.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(-38.0f, 2.5f, -110.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//4
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(10.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(-34.5f, 2.5f, -145.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//5
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(-88.5f, 2.5f, -168.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//6
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 28.0f),
+		XMMatrixTranslation(-128.5f, 2.5f, -128.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//7
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(-88.5f, 2.5f, -88.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//9
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(22.5f, 7.0f, 0.5f),
+		XMMatrixTranslation(-140.0f, 2.5f, -30.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//10
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(-88.5f, 2.5f, -8.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//11
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(15.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(-122.0f, 2.5f, 13.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//12
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(22.5f, 7.0f, 0.5f),
+		XMMatrixTranslation(-140.0f, 2.5f, 63.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//13
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(15.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(-122.0f, 2.5f, 148.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//14
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(-88.5f, 2.5f, 169.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//15
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(15.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(-122.0f, 2.5f, 108.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
 
 	auto treeSpritesRitem = std::make_unique<RenderItem>();
 	treeSpritesRitem->World = MathHelper::Identity4x4();
