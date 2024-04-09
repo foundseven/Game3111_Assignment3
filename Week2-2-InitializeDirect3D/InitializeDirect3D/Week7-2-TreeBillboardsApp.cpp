@@ -1935,8 +1935,8 @@ void TreeBillboardsApp::BuildRenderItems()
 
 	//geosphere
 	objCBIndex++;
-	CreateNewObject("geosphere", XMMatrixScaling(9.0f, 9.0f, 9.0f),
-		XMMatrixTranslation(-25.0f, 35.0f, 100.0f),  
+	CreateNewObject("geosphere", XMMatrixScaling(12.0f, 12.0f, 12.0f),
+		XMMatrixTranslation(-25.0f, 85.0f, 100.0f),  
 		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
 		objCBIndex, "sun");
 
@@ -2101,11 +2101,31 @@ void TreeBillboardsApp::BuildRenderItems()
 
 	}
 
-	// THE MAZEEEEE
-	//inner
+	//stairs going up
 	objCBIndex++;
-	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 28.0f),
-		XMMatrixTranslation(64.0f, 2.5f, 0.0f),
+	CreateNewObject("wedge", XMMatrixScaling(20.5f, 12.0f, 20.5f),
+		XMMatrixTranslation(0.0f, -4.5f, -55.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "marble");
+
+	//lastly a big quad for the ground
+	objCBIndex++;
+	CreateNewObject("quad",  XMMatrixRotationAxis({ 1,0,0,0 }, XMConvertToRadians(90)) * XMMatrixScaling(424.5f, 444.0f, 424.5f),
+		XMMatrixTranslation(-638.0f, 210.0f, -192.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "grass");
+
+	/*objCBIndex++;
+	CreateNewObject("quad", XMMatrixScaling(15.0f, 15.5f, 15.0f),
+		XMMatrixTranslation(-22.0f, 1.0f, -39.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "stone");*/
+
+	// THE MAZEEEEE
+	//inner - right
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 48.0f),
+		XMMatrixTranslation(64.0f, 2.5f, -45.0f),
 		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
 		objCBIndex, "bush");
 
@@ -2119,6 +2139,20 @@ void TreeBillboardsApp::BuildRenderItems()
 	objCBIndex++;
 	CreateNewObject("box", XMMatrixScaling(29.0f, 7.0f, 0.5f),
 		XMMatrixTranslation(0.0f, 2.5f, 64.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//inner right
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(11.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(37.0f, 2.5f, -64.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//inner left
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(11.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(-37.0f, 2.5f, -64.0f),
 		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
 		objCBIndex, "bush");
 
@@ -2250,6 +2284,124 @@ void TreeBillboardsApp::BuildRenderItems()
 		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
 		objCBIndex, "bush");
 
+	//16
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(35.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(15.0f, 2.5f, 112.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//17
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(-38.5f, 2.5f, 169.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//18
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(8.5f, 2.5f, 134.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//19
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 10.0f),
+		XMMatrixTranslation(55.5f, 2.5f, 169.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//20
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 30.0f),
+		XMMatrixTranslation(120.5f, 2.5f, 124.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//21
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(137.5f, 2.5f, 57.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//22
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 25.0f),
+		XMMatrixTranslation(155.5f, 2.5f, 111.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//23
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(137.5f, 2.5f, 10.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//24
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 25.0f),
+		XMMatrixTranslation(155.5f, 2.5f, 0.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//24
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 25.0f),
+		XMMatrixTranslation(120.5f, 2.5f, -45.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//25
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(137.5f, 2.5f, -102.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//26
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(0.5f, 7.0f, 8.0f),
+		XMMatrixTranslation(155.5f, 2.5f, -120.5f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//27
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(82.5f, 2.5f, 40.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//27
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(102.5f, 2.5f, -20.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//29
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(82.5f, 2.5f, -80.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//30
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(137.5f, 2.5f, -140.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
+
+	//31
+	objCBIndex++;
+	CreateNewObject("box", XMMatrixScaling(8.0f, 7.0f, 0.5f),
+		XMMatrixTranslation(82.5f, 2.5f, -152.0f),
+		XMMatrixRotationRollPitchYaw(0.f, 0.f, 0.f),
+		objCBIndex, "bush");
 
 	auto treeSpritesRitem = std::make_unique<RenderItem>();
 	treeSpritesRitem->World = MathHelper::Identity4x4();
