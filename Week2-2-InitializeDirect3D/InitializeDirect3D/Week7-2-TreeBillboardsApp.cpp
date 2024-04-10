@@ -69,7 +69,6 @@ enum class RenderLayer : int
 	Transparent,
 	AlphaTested,
 	AlphaTestedTreeSprites,
-	//AlphaTestedStatueSprites,
 	Count
 };
 
@@ -109,7 +108,7 @@ private:
 	void BuildBoxGeometry();
 	void BuildTreeSpritesGeometry();
 	//new one for statues
-	//void BuildStatueSpriteGeometry();
+	void BuildStatueSpriteGeometry();
     void BuildPSOs();
     void BuildFrameResources();
     void BuildMaterials();
@@ -146,7 +145,6 @@ private:
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> mStdInputLayout;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> mTreeSpriteInputLayout;
-	//std::vector<D3D12_INPUT_ELEMENT_DESC> mStatueSpriteInputLayout;
 
     RenderItem* mWavesRitem = nullptr;
 
@@ -260,7 +258,7 @@ bool TreeBillboardsApp::Initialize()
     BuildWavesGeometry();
 	BuildBoxGeometry();
 	BuildTreeSpritesGeometry();
-	//BuildStatueSpriteGeometry();
+	BuildStatueSpriteGeometry();
 	BuildMaterials();
     BuildRenderItems();
     BuildFrameResources();
@@ -359,9 +357,6 @@ void TreeBillboardsApp::Draw(const GameTimer& gt)
 
 	mCommandList->SetPipelineState(mPSOs["treeSprites"].Get());
 	DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites]);
-
-	//mCommandList->SetPipelineState(mPSOs["statueSprites"].Get()); 
-	//DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::AlphaTestedStatueSprites]);
 
 	mCommandList->SetPipelineState(mPSOs["transparent"].Get());
 	DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Transparent]);
@@ -628,9 +623,6 @@ void TreeBillboardsApp::UpdateMaterialCBs(const GameTimer& gt)
 ///////////////////////// UPDATING MAIN PASS ////////////////////////////////////
 void TreeBillboardsApp::UpdateMainPassCB(const GameTimer& gt)
 {
-	//XMMATRIX view = XMLoadFloat4x4(&mView);
-	//XMMATRIX proj = XMLoadFloat4x4(&mProj);
-	// 
 	//First Person Camera
 	XMMATRIX view = mCamera.GetView();
 	XMMATRIX proj = mCamera.GetProj();
@@ -802,7 +794,7 @@ void TreeBillboardsApp::LoadTextures()
 	//statue mat
 	auto statueArrayTex = std::make_unique<Texture>();
 	statueArrayTex->Name = "statueArrayTex";
-	statueArrayTex->Filename = L"../../Textures/tree01S.dds";
+	statueArrayTex->Filename = L"../../Textures/statue.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), statueArrayTex->Filename.c_str(),
 		statueArrayTex->Resource, statueArrayTex->UploadHeap));
@@ -875,7 +867,7 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 10;
+	srvHeapDesc.NumDescriptors = 11;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
@@ -904,7 +896,7 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	// TREE HEAP //
 	auto treeArrayTex = mTextures["treeArrayTex"]->Resource;
 	// Statue HEAP //
-	//auto statueArrayTex = mTextures["statueArrayTex"]->Resource;
+	auto statueArrayTex = mTextures["statueArrayTex"]->Resource;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -980,17 +972,17 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	srvDesc.Texture2DArray.ArraySize = treeArrayTex->GetDesc().DepthOrArraySize;
 	md3dDevice->CreateShaderResourceView(treeArrayTex.Get(), &srvDesc, hDescriptor);
 
-	//// next descriptor
-	//hDescriptor.Offset(1, mCbvSrvDescriptorSize);
+	// next descriptor
+	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
-	//auto desc2 = statueArrayTex->GetDesc();
-	//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-	//srvDesc.Format = statueArrayTex->GetDesc().Format;
-	//srvDesc.Texture2DArray.MostDetailedMip = 0;
-	//srvDesc.Texture2DArray.MipLevels = -1;
-	//srvDesc.Texture2DArray.FirstArraySlice = 0;
-	//srvDesc.Texture2DArray.ArraySize = statueArrayTex->GetDesc().DepthOrArraySize;
-	//md3dDevice->CreateShaderResourceView(statueArrayTex.Get(), &srvDesc, hDescriptor);
+	auto desc2 = statueArrayTex->GetDesc();
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+	srvDesc.Format = statueArrayTex->GetDesc().Format;
+	srvDesc.Texture2DArray.MostDetailedMip = 0;
+	srvDesc.Texture2DArray.MipLevels = -1;
+	srvDesc.Texture2DArray.FirstArraySlice = 0;
+	srvDesc.Texture2DArray.ArraySize = statueArrayTex->GetDesc().DepthOrArraySize;
+	md3dDevice->CreateShaderResourceView(statueArrayTex.Get(), &srvDesc, hDescriptor);
 }
 
 void TreeBillboardsApp::BuildShadersAndInputLayouts()
@@ -1016,10 +1008,6 @@ void TreeBillboardsApp::BuildShadersAndInputLayouts()
 	mShaders["treeSpriteGS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", nullptr, "GS", "gs_5_1");
 	mShaders["treeSpritePS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", alphaTestDefines, "PS", "ps_5_1");
 
-	//mShaders["statueSpriteVS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", nullptr, "VS", "vs_5_1");
-	//mShaders["statueSpriteGS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", nullptr, "GS", "gs_5_1");
-	//mShaders["statueSpritePS"] = d3dUtil::CompileShader(L"Shaders\\TreeSprite.hlsl", alphaTestDefines, "PS", "ps_5_1");
-
     mStdInputLayout =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -1032,12 +1020,6 @@ void TreeBillboardsApp::BuildShadersAndInputLayouts()
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "SIZE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
-
-	/*mStatueSpriteInputLayout =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "SIZE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	};*/
 }
 
 void TreeBillboardsApp::BuildLandGeometry()
@@ -1684,68 +1666,76 @@ void TreeBillboardsApp::BuildTreeSpritesGeometry()
 	mGeometries["treeSpritesGeo"] = std::move(geo);
 }
 
-//void TreeBillboardsApp::BuildStatueSpriteGeometry()
-//{
-//	//step5
-//	struct StatueSpriteVertex
-//	{
-//		XMFLOAT3 Pos;
-//		XMFLOAT2 Size;
-//	};
-//
-//	static const int statueCount = 4;
-//	std::array<StatueSpriteVertex, 16> vertices;
-//	for (UINT i = 0; i < statueCount; ++i)
-//	{
-//		float x = MathHelper::RandF(-30.0f, 68.0f); //for the statue
-//		float z = MathHelper::RandF(-45.0f, 55.0f); //for the statue
-//		float y = GetHillsHeight(x, z);
-//
-//		// Move statue slightly above land height.
-//		y = 10.0f;
-//
-//		vertices[i].Pos = XMFLOAT3(x, y, z);
-//		vertices[i].Size = XMFLOAT2(20.0f, 20.0f);
-//	}
-//
-//	std::array<std::uint16_t, 16> indices =
-//	{
-//		0, 1, 2, 3, 4, 5, 6, 7,
-//		8, 9, 10, 11, 12, 13, 14, 15
-//	};
-//
-//	const UINT vbByteSize = (UINT)vertices.size() * sizeof(StatueSpriteVertex);
-//	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-//
-//	auto geo = std::make_unique<MeshGeometry>();
-//	geo->Name = "statueSpritesGeo";
-//
-//	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-//	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-//
-//	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-//	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-//
-//	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-//		mCommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
-//
-//	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
-//		mCommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
-//
-//	geo->VertexByteStride = sizeof(StatueSpriteVertex);
-//	geo->VertexBufferByteSize = vbByteSize;
-//	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-//	geo->IndexBufferByteSize = ibByteSize;
-//
-//	SubmeshGeometry submesh;
-//	submesh.IndexCount = (UINT)indices.size();
-//	submesh.StartIndexLocation = 0;
-//	submesh.BaseVertexLocation = 0;
-//
-//	geo->DrawArgs["points"] = submesh;
-//
-//	mGeometries["statueSpritesGeo"] = std::move(geo);
-//}
+void TreeBillboardsApp::BuildStatueSpriteGeometry()
+{
+	//step5
+	struct TreeSpriteVertex
+	{
+		XMFLOAT3 Pos;
+		XMFLOAT2 Size;
+	};
+
+	static const int treeCount = 2;
+	std::array<TreeSpriteVertex, 2> vertices;
+	for (UINT i = 0; i < treeCount; ++i)
+	{
+		
+		float x, y, z = 12.0f;
+		//float x, z;
+		if (i < 1)
+		{
+			
+			x = -40.0f;
+			z = 30.0f;
+			y = 15.0f;
+		}
+		else
+		{
+			x = 40.0f;
+			z = 30.0f;
+			y = 15.0f;
+		}
+		vertices[i].Pos = XMFLOAT3(x, y, z);
+		vertices[i].Size = XMFLOAT2(50.0f, 80.0f);
+	}
+
+	std::array<std::uint16_t, 16> indices =
+	{
+		0, 1
+	};
+
+	const UINT vbByteSize = (UINT)vertices.size() * sizeof(TreeSpriteVertex);
+	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+	auto geo = std::make_unique<MeshGeometry>();
+	geo->Name = "statueSpritesGeo";
+
+	ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+	CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+	ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+	CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+	geo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
+		mCommandList.Get(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
+
+	geo->IndexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(),
+		mCommandList.Get(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+
+	geo->VertexByteStride = sizeof(TreeSpriteVertex);
+	geo->VertexBufferByteSize = vbByteSize;
+	geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+	geo->IndexBufferByteSize = ibByteSize;
+
+	SubmeshGeometry submesh;
+	submesh.IndexCount = (UINT)indices.size();
+	submesh.StartIndexLocation = 0;
+	submesh.BaseVertexLocation = 0;
+
+	geo->DrawArgs["points"] = submesh;
+
+	mGeometries["statueSpritesGeo"] = std::move(geo);
+}
 
 void TreeBillboardsApp::BuildPSOs()
 {
@@ -1845,32 +1835,6 @@ void TreeBillboardsApp::BuildPSOs()
 	treeSpritePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&treeSpritePsoDesc, IID_PPV_ARGS(&mPSOs["treeSprites"])));
-
-	//
-	// PSO for Statue sprites
-	//
-	//D3D12_GRAPHICS_PIPELINE_STATE_DESC statueSpritePsoDesc = opaquePsoDesc;
-	//statueSpritePsoDesc.VS =
-	//{
-	//	reinterpret_cast<BYTE*>(mShaders["statueSpriteVS"]->GetBufferPointer()),
-	//	mShaders["statueSpriteVS"]->GetBufferSize()
-	//};
-	//statueSpritePsoDesc.GS =
-	//{
-	//	reinterpret_cast<BYTE*>(mShaders["statueSpriteGS"]->GetBufferPointer()),
-	//	mShaders["statueSpriteGS"]->GetBufferSize()
-	//};
-	//statueSpritePsoDesc.PS =
-	//{
-	//	reinterpret_cast<BYTE*>(mShaders["statueSpritePS"]->GetBufferPointer()),
-	//	mShaders["statueSpritePS"]->GetBufferSize()
-	//};
-	////step1
-	//statueSpritePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	//statueSpritePsoDesc.InputLayout = { mStatueSpriteInputLayout.data(), (UINT)mStatueSpriteInputLayout.size() };
-	//statueSpritePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-
-	//ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&statueSpritePsoDesc, IID_PPV_ARGS(&mPSOs["statueSprites"])));
 }
 
 void TreeBillboardsApp::BuildFrameResources()
@@ -2572,26 +2536,26 @@ void TreeBillboardsApp::BuildRenderItems()
 
 	mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites].push_back(treeSpritesRitem.get());
 
-	////for the statues
-	//auto statueSpritesRitem = std::make_unique<RenderItem>();
-	//statueSpritesRitem->World = MathHelper::Identity4x4();
-	//objCBIndex++;
-	//statueSpritesRitem->ObjCBIndex = objCBIndex;
-	//statueSpritesRitem->Mat = mMaterials["statueSprites"].get();
-	//statueSpritesRitem->Geo = mGeometries["statueSpritesGeo"].get();
-	////step2
-	//statueSpritesRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-	//statueSpritesRitem->IndexCount = statueSpritesRitem->Geo->DrawArgs["points"].IndexCount;
-	//statueSpritesRitem->StartIndexLocation = statueSpritesRitem->Geo->DrawArgs["points"].StartIndexLocation;
-	//statueSpritesRitem->BaseVertexLocation = statueSpritesRitem->Geo->DrawArgs["points"].BaseVertexLocation;
+	//for the statues
+	auto statueSpritesRitem = std::make_unique<RenderItem>();
+	statueSpritesRitem->World = MathHelper::Identity4x4();
+	objCBIndex++;
+	statueSpritesRitem->ObjCBIndex = objCBIndex;
+	statueSpritesRitem->Mat = mMaterials["statueSprites"].get();
+	statueSpritesRitem->Geo = mGeometries["statueSpritesGeo"].get();
+	//step2
+	statueSpritesRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+	statueSpritesRitem->IndexCount = statueSpritesRitem->Geo->DrawArgs["points"].IndexCount;
+	statueSpritesRitem->StartIndexLocation = statueSpritesRitem->Geo->DrawArgs["points"].StartIndexLocation;
+	statueSpritesRitem->BaseVertexLocation = statueSpritesRitem->Geo->DrawArgs["points"].BaseVertexLocation;
 
-	//mRitemLayer[(int)RenderLayer::AlphaTestedStatueSprites].push_back(statueSpritesRitem.get());
+	mRitemLayer[(int)RenderLayer::AlphaTestedTreeSprites].push_back(statueSpritesRitem.get());
 
 
     mAllRitems.push_back(std::move(wavesRitem));
     mAllRitems.push_back(std::move(gridRitem));
 	mAllRitems.push_back(std::move(treeSpritesRitem));
-	//mAllRitems.push_back(std::move(statueSpritesRitem));
+	mAllRitems.push_back(std::move(statueSpritesRitem));
 }
 
 void TreeBillboardsApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems)
