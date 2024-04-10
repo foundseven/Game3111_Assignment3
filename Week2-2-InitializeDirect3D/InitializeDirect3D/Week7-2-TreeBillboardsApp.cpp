@@ -1574,26 +1574,54 @@ void TreeBillboardsApp::BuildTreeSpritesGeometry()
 		XMFLOAT2 Size;
 	};
 
-	static const int treeCount = 4;
-	std::array<TreeSpriteVertex, 16> vertices;
+	static const int treeCount = 64;
+	std::array<TreeSpriteVertex, 64> vertices;
 	for(UINT i = 0; i < treeCount; ++i)
 	{
-		float x = MathHelper::RandF(-30.0f, 68.0f); //for the trees
-		float z = MathHelper::RandF(-45.0f, 55.0f); //for the trees
-		float y = GetHillsHeight(x, z);
+		//first quater - left side 
+		if (i < treeCount / 4)
+		{ 
+			float x = MathHelper::RandF(-200.0f, -200.0f); //for the trees
+			float z = MathHelper::RandF(-200.0f, 200.0f); //for the trees
+			float y = 12.0f;		
 
-		// Move tree slightly above land height.
-		y = 10.0f;
+			vertices[i].Pos = XMFLOAT3(x, y, z);
+			vertices[i].Size = XMFLOAT2(50.0f, 50.0f);
+		}
+		//second quater - right side
+		else if (i < treeCount / 2)
+		{
+			float x = MathHelper::RandF(200.0f, 200.0f); //for the trees
+			float z = MathHelper::RandF(-200.0f, 200.0f); //for the trees
+			float y = 12.0f;
 
-		vertices[i].Pos = XMFLOAT3(x, y, z);
-		vertices[i].Size = XMFLOAT2(20.0f, 20.0f);
+			vertices[i].Pos = XMFLOAT3(x, y, z);
+			vertices[i].Size = XMFLOAT2(50.0f, 50.0f);
+		}
+		//far back
+		else
+		{
+			float x = MathHelper::RandF(-200.0f, 200.0f);
+			float z = MathHelper::RandF(200.0f, 200.0f);
+			float y = 10.0f; //GetHillsHeight(x, z);
+
+			vertices[i].Pos = XMFLOAT3(x, y, z);
+			vertices[i].Size = XMFLOAT2(50.0f, 50.0f);
+		}
 	}
 
-	std::array<std::uint16_t, 16> indices =
+	std::array<std::uint16_t, 64> indices =
 	{
 		0, 1, 2, 3, 4, 5, 6, 7,
-		8, 9, 10, 11, 12, 13, 14, 15
+		8, 9, 10, 11, 12, 13, 14, 15,
+		16, 17, 18, 19, 20, 21, 22, 23,
+		24, 25, 26, 27, 28, 29, 30, 31,
+		32, 33, 34, 35, 36, 37, 38, 39,
+		40, 41, 42, 43, 44, 45, 46, 47,
+		48, 49, 50, 51, 52, 53, 54, 55,
+		56, 57, 58, 59, 60, 61, 62, 63
 	};
+
 
 	const UINT vbByteSize = (UINT)vertices.size() * sizeof(TreeSpriteVertex);
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
